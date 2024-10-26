@@ -1,0 +1,7 @@
+streamlit
+torch
+torchvision
+Pillow
+numpy
+pyyaml
+openai

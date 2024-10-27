@@ -50,7 +50,7 @@ Before you begin, make sure you have the following installed on your system:
 1. **Clone the repository**:
 
    ```bash
-   [git clone https://github.com/your-username/resilitree.git](https://github.com/douglasta2024/ResiliTree.git)
+   git clone https://github.com/douglasta2024/ResiliTree.git
    cd ResiliTree
    ```
 

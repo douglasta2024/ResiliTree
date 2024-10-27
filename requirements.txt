@@ -1,4 +1,5 @@
 streamlit
+streamlit-chat
 torch
 torchvision
 Pillow

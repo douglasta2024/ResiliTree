@@ -87,6 +87,47 @@ def get_auth_token():
     else:
         raise Exception("Failed to get authentication token")
 
+def describe_disaster_relief(text_input):
+    
+    token = get_auth_token()
+
+    url = "https://us-south.ml.cloud.ibm.com/ml/v1/text/generation?version=2023-05-29"
+
+    body = {
+        "input": f"""
+                    Chatbot: You are a helpful disaster relief chatbot. Your main purpose is to answer user questions about disasters and how to prepare for them.
+                    You're domain of expertise is specifically related to hurricanes. You do not answer questions unrelated to hurricanes or hurricane preparedness.
+                    Besides answering the user question, do not output anything related to the AI itself.
+
+                    USER: {text_input}
+                    """,
+        "parameters": {
+            "decoding_method": "greedy",
+            "max_new_tokens": 900,
+            "repetition_penalty": 1.05
+        },
+        "model_id": "ibm/granite-13b-chat-v2",
+        "project_id": "c402eca2-1dc4-4829-b51e-f5caf31f8676"
+    }
+
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {token}"
+    }
+
+    response = requests.post(
+        url,
+        headers=headers,
+        json=body
+    )
+    print(response.text)
+    if response.status_code != 200:
+        raise Exception("Non-200 response: " + str(response.text))
+
+    data = response.json()
+    res_content = data['results'][0]['generated_text']
+    return res_content
 
 def describe_fall_prone(text_input):
     
@@ -95,7 +136,9 @@ def describe_fall_prone(text_input):
     url = "https://us-south.ml.cloud.ibm.com/ml/v1/text/generation?version=2023-05-29"
 
     body = {
-        "input": f"he user has the following question. Answer this question and this question only. Here is the question -: {text_input}",
+        "input": f"""
+                    The user has the following question. Answer this question and this question only. Here is the question -: {text_input}
+                    """,
         "parameters": {
             "decoding_method": "greedy",
             "max_new_tokens": 900,
@@ -126,15 +169,15 @@ def describe_fall_prone(text_input):
 
 
 # Streamlit UI
-st.title("Welcome to RESILITREE!")
+st.title("💨🌳🏠 RESILITREE 💨🌳🏠")
 
 
-st.header("Home")
-st.write("Welcome to RESILITREE! 🌳")
+st.header("💡Welcome to RESILITREE!")
 st.write(
-    "RESILITREE helps you assess the fall risk of trees during natural disasters like hurricanes. "
-    "We use advanced AI models to predict which trees are prone to falling and provide personalized precautionary measures. "
-    "Additionally, you can consult our Disaster Help Chatbot to get guidance on disaster preparedness and safety."
+    """
+        RESILITREE helps you assess the fall risk of trees during hurricanes. 
+        Combining computer vision techniques as well as IBM's state-of-the-art LLM, Granite, RESILITREE works to classify common trees in Florida and helps to predict which trees are prone to falling over during storms. Our application also provides users with personalized precautionary measures in order to prevent natural destruction from hurricanes. For tree classification, please select "Fall Risk Prediciton" down below. For the more personalized approach, please feel free to select "Hurrican Relief Chatbot" to learn more about disaster preparedness and safety.
+    """
 )
 
 
@@ -145,7 +188,7 @@ st.sidebar.write("1. Select an option from the navigation menu.\n2. Upload a tre
 
 
 
-option = st.selectbox("Select an option", ("Fall Risk Prediction", "Disaster Relief Chatbot"))
+option = st.selectbox("Select an option", ("Fall Risk Prediction", "Hurricane Relief Chatbot"))
 
 if option == 'Fall Risk Prediction' : 
     st.title("Tree Fall Risk Prediction")
@@ -167,24 +210,25 @@ if option == 'Fall Risk Prediction' :
                 st.write(f"The tree is categorized as **{fall_status}**.")
 
                 # Provide explanation using an LLM
-                explanation = describe_fall_prone(f"Explain why the {tree_type} tree is considered {fall_status} in the context of natural disasters like hurricanes. If the tree is prone to falling, have a separate heading and give suggestions on how to keep {tree_type} stabilize during hurricanes, specifically suggestions that a person can do last minute to prevent their tree from falling. If the tree is not prone to falling then state why {tree_type} does well in hurricanes and give a list of suggestions on how a homeowner could secure their home instead.")
+                explanation = describe_fall_prone(f"Explain why the {tree_type} tree is considered {fall_status} in the context of natural disasters like hurricanes. If {tree_type} is prone to falling then list the top 3 ways a homeowner can secure their tree.")
                 st.write("### Precautionary measures:")
                 st.write(explanation)
                 st.download_button("Download Query Output", data=explanation, file_name="tree_analysis.txt")
 
 
-elif option == 'Disaster Relief Chatbot':
-    st.title("Disaster Relief Chatbot")
+elif option == 'Hurricane Relief Chatbot':
+    response = ""
+    st.title("Hurricane Relief Chatbot")
 
     if 'latest_interaction' not in st.session_state:
         st.session_state.latest_interaction = {"user_input": "", "response": ""}
 
-    user_input = st.text_input("Ask about disasters or precautions:", key="user_input")
+    user_input = st.text_input("Ask any hurricane related questions or precautions:", key="user_input")
 
     if st.button("Send", key="send_button"):
         if user_input:
             with st.spinner("Thinking..."):
-                response = describe_fall_prone(user_input)
+                response = describe_disaster_relief(user_input)
 
                 st.session_state.latest_interaction["user_input"] = user_input
                 st.session_state.latest_interaction["response"] = response

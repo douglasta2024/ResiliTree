@@ -1,4 +1,3 @@
-from ibm_watson import IAMTokenManager
 import streamlit as st
 import torch
 from torchvision import transforms, models
@@ -6,7 +5,14 @@ from PIL import Image
 import numpy as np
 import requests
 from streamlit_chat import message 
+import os
 
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+api_key = os.getenv("IBM_API_KEY")
 model = models.efficientnet_b0(pretrained=False)  # Example: Adjust to match your architecture
 
 # Ensure the output features match your number of classes (e.g., 6 classes for 6 tree types)
@@ -71,7 +77,7 @@ def get_auth_token():
     
     data = {
         "grant_type": "urn:ibm:params:oauth:grant-type:apikey",
-        "apikey": 'IDZqAzLSzXq70oDqxI8pAEOheMKKjLTL5TIx0lyt-QJN'
+        "apikey": api_key
     }
 
     response = requests.post(auth_url, headers=headers, data=data, verify=False)
@@ -89,7 +95,7 @@ def describe_fall_prone(text_input):
     url = "https://us-south.ml.cloud.ibm.com/ml/v1/text/generation?version=2023-05-29"
 
     body = {
-        "input": f"{text_input}",
+        "input": f"he user has the following question. Answer this question and this question only. Here is the question -: {text_input}",
         "parameters": {
             "decoding_method": "greedy",
             "max_new_tokens": 900,
@@ -116,54 +122,90 @@ def describe_fall_prone(text_input):
 
     data = response.json()
     res_content = data['results'][0]['generated_text']
-    return res_content.lstrip('.\n')
+    return res_content
 
 
 # Streamlit UI
-st.title("Tree Type Classification and Fall Risk Detection")
-uploaded_file = st.file_uploader("Upload an image of a tree", type=["jpg", "png", "jpeg"])
-if uploaded_file:
-    st.image(uploaded_file, caption="Uploaded Tree Image", use_column_width=True)
+st.title("Welcome to RESILITREE!")
 
-    if st.button("Tell me the type of the tree"):
-        # Predict tree type
-        tree_type, confidence = predict_tree_type(uploaded_file)
-        st.write(f"Predicted Tree Type: **{tree_type}** with confidence {confidence * 100:.2f}%")
 
-        # Check if the tree is fall-prone
-        is_fall_prone, fall_status = check_fall_prone(tree_type)
-        if fall_status == "unknown":
-            st.write(f"The tree type **{tree_type}** is not recognized in the current fall-prone or not fall-prone lists.")
-        else:
-            st.write(f"The tree is categorized as **{fall_status}**.")
+st.header("Home")
+st.write("Welcome to RESILITREE! 🌳")
+st.write(
+    "RESILITREE helps you assess the fall risk of trees during natural disasters like hurricanes. "
+    "We use advanced AI models to predict which trees are prone to falling and provide personalized precautionary measures. "
+    "Additionally, you can consult our Disaster Help Chatbot to get guidance on disaster preparedness and safety."
+)
 
-            # Provide explanation using an LLM
-            explanation = describe_fall_prone(f"Explain why the {tree_type} tree is considered {fall_status} in the context of natural disasters like hurricanes. If the tree is prone to falling, have a separate heading and give suggestions on how to keep {tree_type} stabilize during hurricanes, specifically suggestions that a person can do last minute to prevent their tree from falling. If the tree is not prone to falling then state why {tree_type} does well in hurricanes and give a list of suggestions on how a homeowner could secure their home instead.")
-            st.write("### Precautionary measures:")
-            st.write(explanation)
 
-import streamlit as st
-from streamlit_chat import message
+#website navigation instructions
+st.sidebar.subheader("How to Use:")
+st.sidebar.write("1. Select an option from the navigation menu.\n2. Upload a tree image for risk prediction.\n3. Ask questions to the Disaster Relief Chatbot.")
 
-# Chatbot Interface in Sidebar
-st.sidebar.title("Disaster and Tree Precautionary Chatbot")
 
-if 'chat_history' not in st.session_state:
-    st.session_state.chat_history = []
 
-# User message input in the sidebar
-user_input = st.sidebar.text_input("Ask about disasters or precautions:", key="user_input")
 
-if st.sidebar.button("Send", key="send_button"):
-    if user_input:
-        with st.spinner("Thinking..."):
-            response = describe_fall_prone(user_input)
-        # Append user input and response to chat history
-        st.session_state.chat_history.append(("You", user_input))
-        st.session_state.chat_history.append(("Chatbot", response))
+option = st.selectbox("Select an option", ("Fall Risk Prediction", "Disaster Relief Chatbot"))
 
-# Display chat history in the sidebar
-for i, (speaker, message_content) in enumerate(st.session_state.chat_history):
-    with st.sidebar:
-        message(message_content, is_user=(speaker == "You"), key=f"message_{i}")
+if option == 'Fall Risk Prediction' : 
+    st.title("Tree Fall Risk Prediction")
 
+    uploaded_file = st.file_uploader("Upload an image of a tree", type=["jpg", "png", "jpeg"])
+    if uploaded_file:
+        st.image(uploaded_file, caption="Uploaded Tree Image", use_column_width=True)
+
+        if st.button("Tell me the type of the tree"):
+            # Predict tree type
+            tree_type, confidence = predict_tree_type(uploaded_file)
+            st.write(f"Predicted Tree Type: **{tree_type}** with confidence {confidence * 100:.2f}%")
+
+            # Check if the tree is fall-prone
+            is_fall_prone, fall_status = check_fall_prone(tree_type)
+            if fall_status == "unknown":
+                st.write(f"The tree type **{tree_type}** is not recognized in the current fall-prone or not fall-prone lists.")
+            else:
+                st.write(f"The tree is categorized as **{fall_status}**.")
+
+                # Provide explanation using an LLM
+                explanation = describe_fall_prone(f"Explain why the {tree_type} tree is considered {fall_status} in the context of natural disasters like hurricanes. If the tree is prone to falling, have a separate heading and give suggestions on how to keep {tree_type} stabilize during hurricanes, specifically suggestions that a person can do last minute to prevent their tree from falling. If the tree is not prone to falling then state why {tree_type} does well in hurricanes and give a list of suggestions on how a homeowner could secure their home instead.")
+                st.write("### Precautionary measures:")
+                st.write(explanation)
+                st.download_button("Download Query Output", data=explanation, file_name="tree_analysis.txt")
+
+
+elif option == 'Disaster Relief Chatbot':
+    st.title("Disaster Relief Chatbot")
+
+    if 'latest_interaction' not in st.session_state:
+        st.session_state.latest_interaction = {"user_input": "", "response": ""}
+
+    user_input = st.text_input("Ask about disasters or precautions:", key="user_input")
+
+    if st.button("Send", key="send_button"):
+        if user_input:
+            with st.spinner("Thinking..."):
+                response = describe_fall_prone(user_input)
+
+                st.session_state.latest_interaction["user_input"] = user_input
+                st.session_state.latest_interaction["response"] = response
+
+            st.session_state['user_input_reset'] = ""  
+
+    # Display the latest interaction
+    if st.session_state.latest_interaction["user_input"]:
+        message(st.session_state.latest_interaction["user_input"], is_user=True, key="latest_user_message")
+        message(st.session_state.latest_interaction["response"], is_user=False, key="latest_response_message")
+        st.download_button("Download Query Output", data=response, file_name="query_output.txt")
+
+
+
+
+st.markdown(
+    """
+    <hr>
+    <footer style="text-align: center;">
+        <p>RESILITREE © 2024 | <a href='https://github.com/douglasta2024/ResiliTree'>Visit our repository</a> | Contact us: resilitree@hackathon.com</p>
+    </footer>
+    """,
+    unsafe_allow_html=True,
+)

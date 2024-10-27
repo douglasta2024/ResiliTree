@@ -5,3 +5,4 @@ Pillow
 numpy
 pyyaml
 openai
+python-dotenv

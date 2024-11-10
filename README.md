@@ -4,6 +4,8 @@
 # RESILITREE 🌳
 
 Welcome to **RESILITREE** - a powerful application designed to help you assess tree fall risks during natural disasters like hurricanes and provide disaster relief guidance through an interactive chatbot.
+![image](https://github.com/user-attachments/assets/d940133d-4c5a-4957-9872-a3b27da1c83c)
+
 
 ## Table of Contents
 
